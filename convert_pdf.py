@@ -48,11 +48,19 @@ SECTIONS = [
 with sync_playwright() as p:
     browser = p.chromium.launch()
     page = browser.new_page(viewport={'width': VIEWPORT_W, 'height': 900})
+    # ★ 페이지 스크립트 실행 전 미리 주입: KPI 카운트업 옵저버 skip
+    page.add_init_script("""
+        document.addEventListener('DOMContentLoaded', () => {
+            document.querySelectorAll('.kpi-num').forEach(el => el.dataset.animated = 'true');
+        });
+    """)
     page.goto(Path(HTML).as_uri(), wait_until='networkidle')
     page.emulate_media(media='screen')
 
     # lazy-load + reveal 즉시 표시
     page.evaluate("""() => {
+        // PDF 전용: KPI 카운트업 즉시 완료 처리 (라이브 웹에는 영향 없음)
+        document.querySelectorAll('.kpi-num').forEach(el => el.dataset.animated = 'true');
         document.querySelectorAll('img[loading="lazy"]').forEach(i => i.loading='eager');
         document.querySelectorAll('.reveal').forEach(el => el.classList.add('revealed'));
     }""")
