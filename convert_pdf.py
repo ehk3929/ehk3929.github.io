@@ -109,6 +109,9 @@ with sync_playwright() as p:
             #commit .p-row { padding: 20px 0 !important; }
             #commit .p-when { padding: 14px 16px !important; }
             #commit .p-what { padding: 14px 18px !important; }
+            /* 우측 갤러리 블록(B2B 고객사 등) 페이지 잘림 방지 */
+            .afr-list { page-break-inside: avoid !important; break-inside: avoid !important; }
+            .gallery-label { page-break-after: avoid !important; break-after: avoid !important; }
             /* closing: 페이지 분할 강제 해제 (8쪽 유발 원인) */
             .closing { page-break-inside: auto !important; break-inside: auto !important; padding-top: 12px !important; margin-top: 16px !important; }
             .closing-quote { padding: 14px 20px !important; margin-bottom: 14px !important; }
@@ -207,7 +210,7 @@ with sync_playwright() as p:
                 prefer_css_page_size=False,
                 display_header_footer=True,
                 header_template='<span></span>',
-                footer_template='<div style="font-size:9px;color:#aaa;width:100%;text-align:right;padding:0 24px 6px;font-family:sans-serif;letter-spacing:0.04em;">https://ehk3929.github.io</div>',
+                footer_template='<div style="font-size:9px;color:#aaa;width:100%;text-align:right;padding:0 24px 6px;font-family:sans-serif;letter-spacing:0.04em;"><a href="https://ehk3929.github.io" style="color:#aaa;text-decoration:none;">https://ehk3929.github.io</a></div>',
                 margin={'top':'0','bottom':'24px','left':'0','right':'0'},
                 page_ranges=str(pg + 1),
             )
