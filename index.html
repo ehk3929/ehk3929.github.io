@@ -1288,22 +1288,28 @@ const kpiObserver = new IntersectionObserver((entries) => {
 kpiNums.forEach(el => kpiObserver.observe(el));
 
 // === Sidebar Active Link Tracking ===
-const sections = document.querySelectorAll('section[id]');
-const navLinks = document.querySelectorAll('.sb-nav a');
-const sectionObserver = new IntersectionObserver((entries) => {
-  entries.forEach(entry => {
-    if (entry.isIntersecting) {
-      const id = entry.target.getAttribute('id');
-      navLinks.forEach(link => {
-        link.classList.remove('active');
-        if (link.getAttribute('href') === '#' + id) {
-          link.classList.add('active');
-        }
-      });
+const sections = Array.from(document.querySelectorAll('section[id]'));
+  const navLinks = Array.from(document.querySelectorAll('.sb-nav a'));
+  let _navTicking = false;
+  function _updateActiveNav() {
+    const triggerY = window.scrollY + window.innerHeight * 0.3;
+    let activeId = sections.length ? sections[0].id : null;
+    for (const sec of sections) {
+      if (sec.offsetTop <= triggerY) activeId = sec.id;
     }
-  });
-}, { threshold: 0.2, rootMargin: '-80px 0px -50% 0px' });
-sections.forEach(section => sectionObserver.observe(section));
+    for (const link of navLinks) {
+      const href = link.getAttribute('href') || '';
+      link.classList.toggle('active', href === '#' + activeId);
+    }
+    _navTicking = false;
+  }
+  window.addEventListener('scroll', () => {
+    if (!_navTicking) {
+      window.requestAnimationFrame(_updateActiveNav);
+      _navTicking = true;
+    }
+  }, { passive: true });
+  _updateActiveNav();
 </script>
 
 
