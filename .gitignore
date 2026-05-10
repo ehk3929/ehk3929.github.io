@@ -1,0 +1,9 @@
+﻿pdf/
+__pycache__/
+*.pyc
+_measure.py
+_verify_active.py
+.DS_Store
+*.tmp
+
+*.pdf
