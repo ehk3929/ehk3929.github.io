@@ -79,6 +79,37 @@ with sync_playwright() as p:
     page.wait_for_load_state('networkidle')
     page.wait_for_timeout(1500)
 
+    # PDF 전용: 간격 압축 + closing break 규칙 완화 (HTML 파일 무수정)
+    page.evaluate("""() => {
+        const s = document.createElement('style');
+        s.textContent = `
+            /* Why 섹션을 위로 끌어올리기 — 상단 margin/padding 모두 축소 */
+            section + #why { margin-top: 0 !important; }
+            #why { margin-top: 0 !important; padding-top: 0 !important; margin-bottom: 24px !important; }
+            #why .section-head { margin-bottom: 18px !important; padding-top: 0 !important; }
+            #why .section-num { margin-bottom: 12px !important; }
+            #why .section-title { margin-bottom: 8px !important; line-height: 1.1 !important; }
+            #why .section-sub { margin-top: 8px !important; }
+            .why-block { gap: 12px !important; margin: 16px 0 !important; }
+            .why-card  { padding: 14px 18px !important; }
+            /* 직전 work 섹션 하단 여백 축소 */
+            #work { margin-bottom: 0 !important; padding-bottom: 0 !important; }
+            #work .work-block:last-child { margin-bottom: 0 !important; }
+            /* Commit — p7 여유 공간 활용해 아래로 내리고 항목 여유 있게 */
+            #commit { margin-top: 32px !important; padding-top: 24px !important; margin-bottom: 24px !important; }
+            #commit .section-head { margin-bottom: 24px !important; }
+            #commit .p-row { padding: 20px 0 !important; }
+            #commit .p-when { padding: 14px 16px !important; }
+            #commit .p-what { padding: 14px 18px !important; }
+            /* closing: 페이지 분할 강제 해제 (8쪽 유발 원인) */
+            .closing { page-break-inside: auto !important; break-inside: auto !important; padding-top: 12px !important; margin-top: 16px !important; }
+            .closing-quote { padding: 14px 20px !important; margin-bottom: 14px !important; }
+            .closing-final { padding: 12px 0 !important; margin: 12px 0 !important; }
+            .signature { margin-top: 16px !important; padding-top: 16px !important; }
+        `;
+        document.head.appendChild(s);
+    }""")
+
     # 각 섹션의 Y 시작 위치 + 높이 측정
     measure_js = """(sections) => {
         const total_h = document.documentElement.scrollHeight;
@@ -98,7 +129,20 @@ with sync_playwright() as p:
     info = page.evaluate(measure_js, SECTIONS)
     positions = info['positions']
     total_h = info['total_h']
-    total_pages = (total_h + PAGE_HEIGHT_PX - 1) // PAGE_HEIGHT_PX
+    # ★ 수학 계산 대신 Chromium 실제 페이지 수 사용
+    # page-break-inside:avoid 등으로 Chromium이 추가 페이지를 만들 수 있음
+    with tempfile.TemporaryDirectory() as _probe_dir:
+        _probe_pdf = os.path.join(_probe_dir, 'probe.pdf')
+        page.pdf(
+            path=_probe_pdf,
+            width=f'{VIEWPORT_W}px',
+            height=f'{PAGE_HEIGHT_PX}px',
+            print_background=True,
+            prefer_css_page_size=False,
+            display_header_footer=False,
+            margin={'top':'0','bottom':'0','left':'0','right':'0'},
+        )
+        total_pages = len(PdfReader(_probe_pdf).pages)
 
     # 페이지별 active nav 결정 — "페이지 내 픽셀 점유 최대 섹션"
     nav_labels = ['01 About', '02 Exec Summary', '03 Track Record',
@@ -130,7 +174,7 @@ with sync_playwright() as p:
 
         page_to_nav.append(best_nav)
 
-    print(f"document height: {total_h}px → {total_pages}쪽")
+    print(f"document height: {total_h}px → Chromium 실제 {total_pages}쪽")
     for i, idx in enumerate(page_to_nav, 1):
         print(f"  p{i}: nav[{idx}] = {nav_labels[idx]}")
 
@@ -153,8 +197,10 @@ with sync_playwright() as p:
                 height=f'{PAGE_HEIGHT_PX}px',
                 print_background=True,
                 prefer_css_page_size=False,
-                display_header_footer=False,
-                margin={'top':'0','bottom':'0','left':'0','right':'0'},
+                display_header_footer=True,
+                header_template='<span></span>',
+                footer_template='<div style="font-size:9px;color:#aaa;width:100%;text-align:right;padding:0 24px 6px;font-family:sans-serif;letter-spacing:0.04em;">https://ehk3929.github.io</div>',
+                margin={'top':'0','bottom':'24px','left':'0','right':'0'},
                 page_ranges=str(pg + 1),
             )
             pdf_files.append(tmp_pdf)
